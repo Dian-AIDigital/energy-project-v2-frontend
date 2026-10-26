@@ -10,6 +10,7 @@ function riskClass(level: number) {
 function statusText(s: string) { return s === "ready" ? "已就绪" : s === "pending" ? "待运行" : "已完成" }
 function statusClass(s: string) { return s === "ready" ? "success" : s === "pending" ? "neutral" : "success" }
 
+/** 图片加载前的兜底底色 */
 function thumbStyle(hint: string) {
   const gradients: Record<string, string> = {
     "wind-pv-blue": "linear-gradient(135deg, #0b3e66, #12558c 45%, #37c6ff)",
@@ -31,7 +32,7 @@ function thumbStyle(hint: string) {
     <div class="grid">
       <button v-for="s in store.scenarios" :key="s.id" class="card" @click="store.applyScenario(s.id)">
         <span class="thumb" :style="thumbStyle(s.imageHint)" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.4"><path d="M3 15l6-5 4 3 5-6 3 3"/><path d="M3 20h18"/></svg>
+          <img :src="`/scenarios/${s.id}.webp`" :alt="s.name" loading="lazy" />
         </span>
         <span class="info">
           <span class="name">{{ s.name }}</span>
@@ -52,24 +53,95 @@ function thumbStyle(hint: string) {
 </template>
 
 <style scoped>
-.grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; }
-.card { display: flex; gap: 10px; padding: 8px; background: rgba(3, 16, 38, 0.6); border: 1px solid rgba(0, 120, 190, 0.35); border-radius: 6px; cursor: pointer; text-align: left; font-family: inherit; color: inherit; transition: border-color .2s, transform .15s; }
+/* 两行等分，禁止子项把面板撑破 */
+.grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  gap: 9px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 7px;
+  background: rgba(3, 16, 38, 0.6);
+  border: 1px solid rgba(0, 120, 190, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  transition: border-color .2s, transform .15s;
+}
 .card:hover { border-color: var(--accent-cyan); transform: translateY(-1px); }
-.thumb { width: 108px; flex: none; border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.thumb svg { width: 46px; height: 46px; opacity: .85; }
-.info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
-.name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
-.tags { display: flex; gap: 5px; flex-wrap: wrap; }
-.tags i { font-style: normal; font-size: 11px; padding: 1px 7px; border: 1px solid rgba(0, 180, 255, .45); border-radius: 9px; color: var(--accent-cyan); background: rgba(0, 60, 110, .35); }
-.risk { display: flex; align-items: center; gap: 5px; }
-.rl { font-size: 11px; color: var(--text-secondary); }
+
+/* 配图：自适应卡片高度，叠一层青蓝纱幕融进大屏底色 */
+.thumb {
+  width: 94px;
+  flex: none;
+  align-self: stretch;
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(1.06) brightness(1.02) contrast(1.03);
+}
+.thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--thumb-scrim), var(--thumb-glow);
+  pointer-events: none;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+  overflow: hidden;
+}
+.name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tags { display: flex; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
+.tags i {
+  font-style: normal;
+  font-size: 10px;
+  line-height: 15px;
+  padding: 0 5px;
+  border: 1px solid rgba(0, 180, 255, .45);
+  border-radius: 8px;
+  color: var(--accent-cyan);
+  background: rgba(0, 60, 110, .35);
+  flex: none;
+}
+.risk { display: flex; align-items: center; gap: 4px; }
+.rl { font-size: 10.5px; color: var(--text-secondary); white-space: nowrap; }
 .blocks { display: inline-flex; gap: 3px; }
-.blocks i { width: 11px; height: 7px; border-radius: 2px; background: rgba(0, 60, 110, .6); }
+.blocks i { width: 9px; height: 6px; border-radius: 2px; background: rgba(0, 60, 110, .6); }
 .blocks.low i.on { background: var(--success); box-shadow: 0 0 4px var(--success); }
 .blocks.mid i.on { background: var(--warning); box-shadow: 0 0 4px var(--warning); }
 .blocks.high i.on { background: var(--danger); box-shadow: 0 0 4px var(--danger); }
-.status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+.status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
 .status.success { color: var(--success); }
 .status.neutral { color: var(--text-secondary); }
-.status svg { width: 14px; height: 14px; }
+.status svg { width: 13px; height: 13px; }
 </style>

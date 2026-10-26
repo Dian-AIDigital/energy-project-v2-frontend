@@ -7,6 +7,9 @@
   --panel-border: rgba(0, 180, 255, 0.45);
   --accent-cyan: #00d8ff;
   --accent-blue: #1e90ff;
+  /* 场景卡配图纱幕：压在照片上，让照片融进大屏底色 */
+  --thumb-scrim: linear-gradient(180deg, rgba(2, 26, 54, 0.04), rgba(1, 12, 28, 0.34));
+  --thumb-glow: radial-gradient(130% 90% at 18% 0%, rgba(0, 216, 255, 0.16), transparent 62%);
   --text-primary: #e6f7ff;
   --text-secondary: #7fa8c9;
   --success: #00e676;
