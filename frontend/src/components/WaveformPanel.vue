@@ -44,7 +44,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <GPanel title="波形图" class="wave-panel">
+  <GPanel title="波形图" class="wave-panel" icon-src="/icons/14-waveform.png">
     <template #icon>
       <path d="M2 12h3l2-7 4 14 3-10 2 3h6" stroke-linecap="round" stroke-linejoin="round"/>
     </template>

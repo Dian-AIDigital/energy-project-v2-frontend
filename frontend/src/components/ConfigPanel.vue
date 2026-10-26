@@ -27,7 +27,7 @@ function iconPath(name: string) {
 </script>
 
 <template>
-  <GPanel title="用户配置参数面板">
+  <GPanel title="用户配置参数面板" icon-src="/icons/15-gear.png">
     <template #icon>
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1M4.9 19.1L7 17m10-10l2.1-2.1" />

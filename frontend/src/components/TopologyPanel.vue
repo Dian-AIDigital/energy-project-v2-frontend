@@ -13,17 +13,19 @@ function nodeStatusClass(s: string) {
   return s === "normal" ? "st-normal" : s === "overload" ? "st-overload" : "st-fault"
 }
 
-function nodeIcon(kind: string) {
-  switch (kind) {
-    case "wind": return "M4 8h9a2.5 2.5 0 10-2.5-2.5M4 12h13a2.5 2.5 0 11-2.5 2.5M4 16h7a2 2 0 11-2 2M12 6.5v9"
-    case "pv": return "M3 9l9-6 9 6M6 9v9h12V9M10 12h1.5v1.5H10zM14 12h1.5v1.5H14zM10 15.5h1.5V17H10zM14 15.5h1.5V17H14z"
-    case "substation": return "M12 3v18M8 8h8M6 12h12M9 3l3 2 3-2M9 21l3-2 3 2M12 8l-3 4h6l-3-4z"
-    case "converter": return "M5 5h14v14H5zM9 9l3 3-3 3M13 15h4"
-    case "grid": return "M12 3l7 16H5zM8.5 13h7M9.8 9.5h4.4"
-    case "industry": return "M3 20V10l5 3v-3l5 3V7h8v13zM7 16h2m3 0h2m3 0h2"
-    case "residential": return "M4 21V11l8-7 8 7v10M9 21v-5h6v5M11 12h2"
-    case "storage": return "M6 8h12a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4a2 2 0 012-2zM18 10h2v4h-2M8 11v2M11 11v2"
-  }
+const ICON_SRC: Record<string, string> = {
+  wind: "/icons/00-wind-turbine.png",
+  pv: "/icons/01-solar-panel.png",
+  substation: "/icons/03-substation.png",
+  converter: "/icons/04-converter.png",
+  grid: "/icons/05-transmission.png",
+  industry: "/icons/07-factory.png",
+  residential: "/icons/06-house-load.png",
+  storage: "/icons/02-battery.png"
+}
+
+function nodeIconSrc(kind: string) {
+  return ICON_SRC[kind] ?? "/icons/23-globe.png"
 }
 
 function toggleFullscreen() {
@@ -35,7 +37,7 @@ function toggleFullscreen() {
 </script>
 
 <template>
-  <GPanel title="拓扑图展示视图" class="topo-panel">
+  <GPanel title="拓扑图展示视图" class="topo-panel" icon-src="/icons/20-network-star.png">
     <template #icon>
       <circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="10" cy="18" r="2.5"/><path d="M8.3 7l7.3.7M7.4 8.2l1.5 7.4M16.4 10.1l-5 6.3"/>
     </template>
@@ -73,9 +75,7 @@ function toggleFullscreen() {
         <g v-for="n in topo.nodes" :key="n.id" class="node" :class="[nodeStatusClass(n.status), { selected: n.id === selectedNode }]" @click="store.selectNode(n.id)" tabindex="0" role="button" :aria-label="n.name" @keydown.enter="store.selectNode(n.id)">
           <circle :cx="n.x" :cy="n.y" r="30" class="node-halo" />
           <circle :cx="n.x" :cy="n.y" r="26" class="node-ring" />
-          <g :transform="`translate(${n.x - 16},${n.y - 16}) scale(1.33)`">
-            <path :d="nodeIcon(n.kind)" class="node-icon" />
-          </g>
+          <image :href="nodeIconSrc(n.kind)" :x="n.x - 15" :y="n.y - 15" width="30" height="30" preserveAspectRatio="xMidYMid meet" class="node-icon-img" />
           <path v-if="n.status !== 'normal'" :d="`M${n.x + 14} ${n.y - 24} l6 10 h-12 z`" class="warn-tri" />
           <text :x="n.x" :y="n.y + 44" class="node-name">{{ n.name }}</text>
           <text :x="n.x" :y="n.y + 58" class="node-sub">{{ n.sub }}</text>

@@ -12,7 +12,7 @@ function statusInfo(s: string) {
 </script>
 
 <template>
-  <GPanel title="仿真任务运行表">
+  <GPanel title="仿真任务运行表" icon-src="/icons/22-org-tree.png">
     <template #icon>
       <rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>
     </template>
