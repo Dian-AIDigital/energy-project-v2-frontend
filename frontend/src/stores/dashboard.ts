@@ -166,7 +166,6 @@ export const useDashboardStore = defineStore("dashboard", {
           this.topologies = allTopologies
           this.currentTopologyId = allTopologies[0].id
 
-          const rawNodes = topoList.find((t: any) => t.topology_code === this.currentTopologyId)?.nodes || []
           const firstTopoDetail = await axios.get(`/api/v1/topologies/${this.currentTopologyId}`)
           const detailNodes = firstTopoDetail.data.nodes || []
           
