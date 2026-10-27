@@ -1,46 +1,44 @@
-# AGENTS.md
+<!-- GLOBAL-RULES:BEGIN -->
+## 全局配置（跨项目通用，必读）
 
-面向 AI 编码代理与开发者的项目约定。
+> 本段是"全局配置"的唯一源文件副本，由 `C:\Users\19182\.agents\sync-agent-rules.ps1` 同步到各 agent 的规则文件。
+> 修改请改源文件 `C:\Users\19182\.agents\AGENTS.global.md`，再运行同步脚本，不要直接手工改副本。
 
-## 项目结构
+### 1. 动手前先查证
+接任何任务，先检查项目现状：目录结构、README/AGENTS.md、docs、已有代码、`git log`、是否已有相关配置或产物。
+**没搞清楚"现在是什么状态"之前，不新建文件、不改动已有文件。**
 
-- `frontend/` — Vue 3 + TS + Vite 大屏前端，所有代码在这里。
-- `docs/` — 会议纪要与设计规格文档，**是 UI 实现的唯一事实源**：
-  - `docs/2026_10月会议纪要/前端界面详细规格说明.md`：逐元素规格（布局坐标、色板 token、控件默认值、示例数据）。
-  - `docs/2026_10月会议纪要/前端界面风格描述与任务划分.md`：风格总结与 T0–T4 任务包分工。
-- 参考效果图在 `docs/2026_10月会议纪要/图片和附件/`。
+### 2. 不编造
+不确定的部分直接说不确定，说明缺什么信息才能确认。
+禁止：编造接口字段、文件路径、命令行参数、数据数值、不存在的功能、没做过的验证结论。
 
-## 设计系统（改动前必读）
+### 3. 不盲目附和
+用户说的内容有问题时，直接指出并说明依据（事实、文档、代码、报错）。
+不要为了"让用户满意"而附和错误判断；也不要用"好的，没问题"掩盖没做的验证。
 
-所有颜色必须引用 `frontend/src/style.css` 中的 CSS 变量，禁止硬编码色值：
-主色 `--accent-cyan #00d8ff`；语义色 `--success`（正常/完成）、`--warning`（越限/排队中）、`--danger`（故障，预留）、`--accent-blue`（运行中）；曲线色 `--chart-purple`（无功）、`--chart-green`（频率）、`--chart-orange`（有功）。
+### 4. 调研要交叉验证
+重要结论至少两个来源交叉验证，并标明来源与时间（链接、文件路径、命令输出）。
+单一来源的说法要注明"仅单一来源，未核实"。
 
-面板统一使用 `GPanel.vue` 外壳（半透明深蓝底 + 1px 青色发光描边 + 四角 L 形折角 + 图标标题行），不要在业务组件里另写面板样式。
+### 5. 风险操作先给方案
+涉及**删除、覆盖、发布上线、推送到远端仓库、改动生产配置、批量改写文件**等操作：
+先说明"要做什么、影响什么、怎么回滚"，等用户确认后再执行。
+只读操作（查看、检查、搜索）不需要确认。
 
-字号层级：页面主标题 30px 粗体带辉光、面板标题 18px、正文/控件 14px、表格 13px、辅助 12px；数字/时间用 `--font-mono`。
+### 6. 技能库位置（跨工具共用）
+本机已安装的 Agent Skills，做对应任务前先读匹配 skill 的 `SKILL.md` 再动手，不要凭猜测：
+- `C:\Users\19182\.claude\skills\` —— 188 个，覆盖学术检索、训练/推理/部署、论文写作、绘图、实验管理等；每个子目录一个 skill，入口文件为 `SKILL.md`。
+- `C:\Users\19182\.agents\skills\` —— 7 个 UI/设计类 skill。
+`SKILL.md` 里的 `allowed-tools` 用的是 Claude Code 工具名（Bash/Read/Write 等），其他工具按自身等价能力替换；skill 与任务不匹配时不要硬套。
 
-动效只保留：拓扑连线能量流动（`flow-dash`）、告警呼吸（`pulse-glow`）、进度条/状态过渡 150–600ms。新增动效需同时提供 `prefers-reduced-motion` 降级（style.css 末尾已有全局降级）。
+### 冲突处理
+本文件与后续对话内容冲突时，以本文件为准；本文件与项目内 `AGENTS.md` 冲突时，项目内更具体的规则优先。
+<!-- GLOBAL-RULES:END -->
 
-## 布局约束
+# 项目配置 · v1 米白图纸大屏（单页面）
 
-- 设计基准 1920×1080 单屏，无页面滚动；大屏缩放由 `App.vue` 的 `fitScreen`（transform: scale）处理，不要在业务面板里再写缩放。
-- 主区三列：左 385px 配置面板 / 中 1fr 拓扑 / 右 500px（波形 + 节点状态）；底部 250px 双面板（场景库 1.4fr / 任务表 1fr）。
-- 修改布局时保持无溢出、无零尺寸元素（Playwright DOM 校验脚本曾以此验收）。
-
-## 数据与状态
-
-- 当前全部数据在 `frontend/src/mock/data.ts`（内容来自规格文档的示例数据），类型定义在 `src/types/index.ts`。
-- 全局状态在 `src/stores/dashboard.ts`（Pinia）：拓扑/量测/任务/场景/波形 + 联动 action。
-- 联调真实接口时：只改 mock 层与 store 的取数 action，组件 props/模板尽量不动；接口动作与 store action 一一对应（提交任务=submitTask、切拓扑=setTopology、场景回填=applyScenario）。
-
-## 提交与验证
-
-- 提交前必须通过：`cd frontend && npm run build`（tsc + vite build）。
-- UI 改动建议用 Playwright 截图 + DOM 校验（面板数量=6、无水平溢出、无零尺寸元素、无页面报错），多分辨率抽查 1366×768 / 1920×1080 / 2560×1440。
-- dev server：`npm run dev`（端口 5173）；后台运行日志在 `frontend/dev-server.log`。
-
-## 约定
-
-- 组件命名：面板组件 `XxxPanel.vue`，通用前缀 `G`。
-- mock 数据中的示例数值（节点量测、任务表、场景卡）与规格文档保持一致，不要随手改。
-- 提交信息用中文短句，说明改了哪个面板/解决了什么问题。
+- 定位：单页工程图纸风格大屏，1920×1080 单屏无滚动；四主题 ?theme=paper|blue|graphite|sepia，**默认 paper**。
+- 技术栈：Vue 3 + TypeScript + Vite；无 UI 库、无图表库；拓扑与波形均为手写 SVG。
+- 结构：rontend/src/components/{SheetStage,TitleBlock,ConsoleRack,NodeDossier,RecordStrip}.vue；数据 src/data/model.ts；样式 src/styles/app.css。
+- 构建校验：cd frontend && npm run build 必须通过（纯 vite build，不用 tsc）。
+- 数据：全部示意数据；真实拓扑与参数不得入库。

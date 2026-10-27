@@ -1,0 +1,243 @@
+/* ============================================================
+   设计 token
+   —— 默认主题：蓝黑（保持原有识别）
+   —— 其他主题：石墨绿 / 暖石灰 / 米白图纸（用 body.theme-* 切换）
+   ============================================================ */
+
+:root {
+  /* 圆角：整体柔化，不再全直角 */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-pill: 999px;
+
+  /* 排印 */
+  --font-cn: "HarmonyOS Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-num: "HarmonyOS Sans SC", "Bahnschrift", ui-monospace, monospace;
+  --font-mono: "HarmonyOS Sans SC", "Consolas", ui-monospace, monospace;
+
+  /* 节奏：4 / 8 / 12 / 20 / 32 */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 20px;
+  --s5: 32px;
+}
+
+/* ---------- 主题 0：蓝黑（默认） ---------- */
+body,
+body.theme-blue {
+  --ink-0: #101a26;
+  --ink-1: #16222f;
+  --ink-2: #1b2836;
+  --ink-3: #223142;
+
+  --rule: rgba(140, 190, 255, 0.20);
+  --rule-soft: rgba(140, 190, 255, 0.11);
+  --rule-strong: rgba(150, 200, 255, 0.38);
+
+  --t1: #f4f9ff;
+  --t2: #b6c7d8;
+  --t3: #90a5b8;
+  --t4: #6d8092;
+
+  --sig: #6cb6ff;
+  --sig-ice: #b8f1ff;
+  --sig-dim: rgba(108, 182, 255, 0.20);
+  --alarm: #ffb066;
+
+  --zone-bg: rgba(255, 255, 255, 0.022);
+  --strip-bg: rgba(0, 0, 0, 0.20);
+  --zone-shadow: 0 2px 14px rgba(0, 0, 0, 0.18);
+  --paper-bg: linear-gradient(180deg, rgba(34, 52, 74, 0.86), rgba(16, 25, 36, 0.95));
+  --paper-shadow: 0 10px 30px rgba(0, 0, 0, 0.30);
+  --grid-minor: rgba(140, 195, 255, 0.06);
+  --grid-major: rgba(140, 195, 255, 0.20);
+
+  --line: rgba(120, 190, 255, 0.90);
+  --line-dim: rgba(120, 190, 255, 0.58);
+  --line-dc: rgba(184, 241, 255, 0.82);
+  --sym-fill: #0b131c;
+  --float-bg: #111a24;
+
+  --alert-bd: rgba(255, 176, 102, 0.70);
+  --alert-bg: rgba(255, 176, 102, 0.12);
+  --alert-fg: #ffc78f;
+  --badge-bg: #ffcf96;
+  --badge-fg: #2a1400;
+}
+
+/* ---------- 主题 1：石墨绿（低饱和护眼） ---------- */
+body.theme-graphite {
+  --ink-0: #101614;
+  --ink-1: #161e1b;
+  --ink-2: #1c2622;
+  --ink-3: #243029;
+
+  --rule: rgba(190, 225, 205, 0.17);
+  --rule-soft: rgba(190, 225, 205, 0.09);
+  --rule-strong: rgba(200, 235, 212, 0.34);
+
+  --t1: #eef6ef;
+  --t2: #b3c6b8;
+  --t3: #8ba394;
+  --t4: #6b8274;
+
+  --sig: #7fdcae;
+  --sig-ice: #c2f5dc;
+  --sig-dim: rgba(127, 220, 174, 0.18);
+  --alarm: #e6b566;
+
+  --zone-bg: rgba(255, 255, 255, 0.026);
+  --strip-bg: rgba(0, 0, 0, 0.22);
+  --zone-shadow: 0 2px 14px rgba(0, 0, 0, 0.20);
+  --paper-bg: linear-gradient(180deg, rgba(38, 54, 46, 0.88), rgba(18, 26, 22, 0.95));
+  --paper-shadow: 0 10px 30px rgba(0, 0, 0, 0.30);
+  --grid-minor: rgba(190, 230, 205, 0.06);
+  --grid-major: rgba(190, 230, 205, 0.18);
+
+  --line: rgba(180, 235, 205, 0.90);
+  --line-dim: rgba(180, 235, 205, 0.58);
+  --line-dc: rgba(210, 250, 225, 0.82);
+  --sym-fill: #101815;
+  --float-bg: #16201c;
+
+  --alert-bd: rgba(230, 181, 102, 0.70);
+  --alert-bg: rgba(230, 181, 102, 0.12);
+  --alert-fg: #f0c886;
+  --badge-bg: #f0cf94;
+  --badge-fg: #2b1c07;
+}
+
+/* ---------- 主题 2：暖石灰（黄铜仪器感） ---------- */
+body.theme-sepia {
+  --ink-0: #17130f;
+  --ink-1: #1e1913;
+  --ink-2: #262019;
+  --ink-3: #302820;
+
+  --rule: rgba(230, 205, 175, 0.18);
+  --rule-soft: rgba(230, 205, 175, 0.09);
+  --rule-strong: rgba(235, 210, 180, 0.36);
+
+  --t1: #f6efe6;
+  --t2: #c9b9a4;
+  --t3: #a08f7a;
+  --t4: #7d6f5e;
+
+  --sig: #e0a86a;
+  --sig-ice: #f6d3a3;
+  --sig-dim: rgba(224, 168, 106, 0.18);
+  --alarm: #e8735a;
+
+  --zone-bg: rgba(255, 240, 220, 0.028);
+  --strip-bg: rgba(0, 0, 0, 0.24);
+  --zone-shadow: 0 2px 14px rgba(0, 0, 0, 0.22);
+  --paper-bg: linear-gradient(180deg, rgba(58, 48, 37, 0.88), rgba(26, 21, 16, 0.95));
+  --paper-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
+  --grid-minor: rgba(235, 210, 180, 0.055);
+  --grid-major: rgba(235, 210, 180, 0.17);
+
+  --line: rgba(235, 205, 165, 0.90);
+  --line-dim: rgba(235, 205, 165, 0.58);
+  --line-dc: rgba(250, 225, 190, 0.82);
+  --sym-fill: #1a1510;
+  --float-bg: #221b14;
+
+  --alert-bd: rgba(232, 115, 90, 0.68);
+  --alert-bg: rgba(232, 115, 90, 0.12);
+  --alert-fg: #f2a48f;
+  --badge-bg: #f2b39c;
+  --badge-fg: #331008;
+}
+
+/* ---------- 主题 3：米白图纸（浅色，最接近真实工程图） ---------- */
+body.theme-paper {
+  --ink-0: #eae4d8;
+  --ink-1: #f2ede3;
+  --ink-2: #f7f2e8;
+  --ink-3: #fbf7ef;
+
+  --rule: rgba(60, 54, 44, 0.20);
+  --rule-soft: rgba(60, 54, 44, 0.11);
+  --rule-strong: rgba(50, 45, 36, 0.42);
+
+  --t1: #2b2721;
+  --t2: #554e44;
+  --t3: #7a7264;
+  --t4: #9a9182;
+
+  --sig: #2f6f8f;
+  --sig-ice: #1f5673;
+  --sig-dim: rgba(47, 111, 143, 0.12);
+  --alarm: #b8552f;
+
+  --zone-bg: rgba(255, 255, 255, 0.55);
+  --strip-bg: rgba(255, 255, 255, 0.42);
+  --zone-shadow: 0 2px 12px rgba(70, 62, 48, 0.10);
+  --paper-bg: linear-gradient(180deg, #fdfaf3, #f5efe3);
+  --paper-shadow: 0 8px 26px rgba(70, 62, 48, 0.16);
+  --grid-minor: rgba(70, 62, 48, 0.055);
+  --grid-major: rgba(70, 62, 48, 0.13);
+
+  --line: rgba(47, 90, 110, 0.88);
+  --line-dim: rgba(47, 90, 110, 0.50);
+  --line-dc: rgba(31, 86, 115, 0.85);
+  --sym-fill: #fbf7ef;
+  --float-bg: #fdfaf3;
+
+  --alert-bd: rgba(184, 85, 47, 0.55);
+  --alert-bg: rgba(184, 85, 47, 0.10);
+  --alert-fg: #9c4526;
+  --badge-bg: #b8552f;
+  --badge-fg: #fdf7ef;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #app { height: 100%; margin: 0; }
+
+body {
+  background: var(--ink-0);
+  color: var(--t1);
+  font-family: var(--font-cn);
+  font-size: 13.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* 小标签：取消全大写与宽字距，改成正常中英混排 */
+.eyebrow {
+  font-family: var(--font-cn);
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  color: var(--t3);
+}
+
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.unit {
+  font-family: var(--font-cn);
+  font-size: 10.5px;
+  color: var(--t3);
+  letter-spacing: 0;
+}
+
+.hr { height: 1px; background: var(--rule); }
+
+button, select, input {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+button { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
