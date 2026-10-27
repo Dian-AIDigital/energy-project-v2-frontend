@@ -230,11 +230,31 @@ const byBus = computed(() => {
   return m
 })
 
-function route(a: TopoNode, b: TopoNode) {
-  if (Math.abs(a.y - b.y) < 3) return `M ${a.x} ${a.y} H ${b.x}`
-  if (Math.abs(a.x - b.x) < 3) return `M ${a.x} ${a.y} V ${b.y}`
-  const midY = (a.y + b.y) / 2
-  return `M ${a.x} ${a.y} V ${midY} H ${b.x} V ${b.y}`
+/** 图上出现的行基准（y）；用于在行间隙里分配横向走线通道 */
+const gridRows = computed(() => {
+  const set = new Set<number>()
+  for (const n of nodes.value) set.add(Math.round(n.y * 100) / 100)
+  return [...set].sort((a, b) => a - b)
+})
+
+/** 圆角正交折线：竖 → 横（通道 laneY）→ 竖，三个拐角倒圆 */
+function orthPath(ax: number, ay: number, bx: number, by: number, laneY: number, radius = 7) {
+  const sx = Math.sign(bx - ax) || 1
+  const sy1 = Math.sign(laneY - ay) || 1
+  const sy2 = Math.sign(by - laneY) || 1
+  const r = Math.max(
+    0,
+    Math.min(radius, Math.abs(bx - ax) / 2, Math.abs(laneY - ay) / 2, Math.abs(by - laneY) / 2)
+  )
+  if (r < 1) return `M ${ax} ${ay} V ${laneY} H ${bx} V ${by}`
+  return (
+    `M ${ax} ${ay} ` +
+    `L ${ax} ${laneY - sy1 * r} ` +
+    `Q ${ax} ${laneY} ${ax + sx * r} ${laneY} ` +
+    `L ${bx - sx * r} ${laneY} ` +
+    `Q ${bx} ${laneY} ${bx} ${laneY + sy2 * r} ` +
+    `L ${bx} ${by}`
+  )
 }
 
 type EdgeGeo = {
@@ -244,19 +264,157 @@ type EdgeGeo = {
   my: number
   angle: number
   type: "ac" | "dc" | "transformer"
+  /** 双回线重复编号时只画一次 */
+  hideNo?: boolean
+}
+
+/* ---------------- 走线：行间隙通道 + 区间着色（重叠的线分到不同轨道） ---------------- */
+const LANE_GAP = 11 // 同一通道内相邻轨道的间距（要容得下支路编号）
+const LANE_MIN_GAP = 26 // 两条线在通道上的最小水平间隔，不够就换轨
+const NODE_PAD = 16 // 绕过节点时留出的余量
+
+type Pending = {
+  e: TopoEdge
+  a: TopoNode
+  b: TopoNode
+  mode: "h" | "v" | "lane"
+  band: number
+  laneY: number
+  x1: number
+  x2: number
+  track: number
 }
 
 const edgeGeos = computed<EdgeGeo[]>(() => {
-  const out: EdgeGeo[] = []
+  const rows = gridRows.value
+  const bands: number[] = []
+  for (let i = 0; i < rows.length - 1; i++) bands.push((rows[i] + rows[i + 1]) / 2)
+
+  // 节点按行归档，用于判断「同行走线中间是否夹着节点」
+  const onRow = (y: number) => nodes.value.filter((n) => Math.abs(n.y - y) < 3)
+
+  const pending: Pending[] = []
   for (const e of edges.value) {
     const a = byBus.value.get(String(e.from))
     const b = byBus.value.get(String(e.to))
     if (!a || !b) continue
-    const horizontal = Math.abs(a.y - b.y) < 3
-    const mx = horizontal ? (a.x + b.x) / 2 : b.x
-    const my = horizontal ? a.y : (a.y + b.y) / 2
-    const angle = horizontal ? (a.x < b.x ? 0 : 180) : a.y < b.y ? 90 : -90
-    out.push({ e, d: route(a, b), mx, my, angle, type: (e.lineType ?? "ac") as EdgeGeo["type"] })
+    const sameRow = Math.abs(a.y - b.y) < 3
+    const sameCol = Math.abs(a.x - b.x) < 3
+
+    if (sameCol) {
+      pending.push({ e, a, b, mode: "v", band: -1, laneY: a.y, x1: a.x, x2: a.x, track: 0 })
+      continue
+    }
+
+    if (sameRow) {
+      // 同行走线：中间夹着别的节点就绕行，否则直线
+      const lo = Math.min(a.x, b.x)
+      const hi = Math.max(a.x, b.x)
+      const blocked = onRow(a.y).some((n) => n.x > lo + NODE_PAD && n.x < hi - NODE_PAD)
+      if (!blocked) {
+        pending.push({ e, a, b, mode: "h", band: -1, laneY: a.y, x1: lo, x2: hi, track: 0 })
+        continue
+      }
+      // 绕行：选上方或下方的通道
+      const above = bands.map((y, i) => ({ y, i })).filter((c) => c.y < a.y - 4).pop()
+      const below = bands.map((y, i) => ({ y, i })).find((c) => c.y > a.y + 4)
+      const band = above ?? below
+      if (!band) {
+        pending.push({ e, a, b, mode: "h", band: -1, laneY: a.y, x1: lo, x2: hi, track: 0 })
+        continue
+      }
+      pending.push({ e, a, b, mode: "lane", band: band.i, laneY: band.y, x1: lo, x2: hi, track: 0 })
+      continue
+    }
+
+    // 跨行走线：在两端行之间挑一条最靠近中线的通道
+    const lo = Math.min(a.y, b.y)
+    const hi = Math.max(a.y, b.y)
+    const mid = (lo + hi) / 2
+    const cands = bands
+      .map((y, i) => ({ y, i }))
+      .filter((c) => c.y > lo + 6 && c.y < hi - 6)
+      .sort((p, q) => Math.abs(p.y - mid) - Math.abs(q.y - mid))
+    if (!cands.length) {
+      pending.push({ e, a, b, mode: "v", band: -1, laneY: mid, x1: a.x, x2: a.x, track: 0 })
+      continue
+    }
+    pending.push({
+      e,
+      a,
+      b,
+      mode: "lane",
+      band: cands[0].i,
+      laneY: cands[0].y,
+      x1: Math.min(a.x, b.x),
+      x2: Math.max(a.x, b.x),
+      track: 0
+    })
+  }
+
+  // 每个通道内做一维区间着色：水平区间重叠的线分到不同轨道
+  const byBand = new Map<number, Pending[]>()
+  for (const p of pending) {
+    if (p.mode !== "lane") continue
+    const list = byBand.get(p.band) ?? []
+    list.push(p)
+    byBand.set(p.band, list)
+  }
+  let maxTracks = 0
+  for (const [, list] of byBand) {
+    list.sort((p, q) => p.x1 - q.x1 || p.x2 - q.x2)
+    const trackEnd: number[] = []
+    for (const p of list) {
+      let t = trackEnd.findIndex((end) => p.x1 > end + LANE_MIN_GAP)
+      if (t < 0) {
+        t = trackEnd.length
+        trackEnd.push(p.x2)
+      } else {
+        trackEnd[t] = p.x2
+      }
+      p.track = t
+    }
+    maxTracks = Math.max(maxTracks, trackEnd.length)
+  }
+
+  const out: EdgeGeo[] = []
+  const labelSeen = new Set<string>()
+  for (const p of pending) {
+    const { a, b, e } = p
+    const type = (e.lineType ?? "ac") as EdgeGeo["type"]
+    let d: string
+    let mx: number
+    let my: number
+    let angle: number
+
+    if (p.mode === "h") {
+      d = `M ${a.x} ${a.y} H ${b.x}`
+      mx = (a.x + b.x) / 2
+      my = a.y
+      angle = a.x < b.x ? 0 : 180
+    } else if (p.mode === "v") {
+      d = `M ${a.x} ${a.y} V ${b.y}`
+      mx = a.x
+      my = (a.y + b.y) / 2
+      angle = a.y < b.y ? 90 : -90
+    } else {
+      // 通道内按轨道序号向两侧分散，避免平行线贴在一起
+      const list = byBand.get(p.band) ?? []
+      const tracks = Math.max(...list.map((q) => q.track)) + 1
+      const laneY = p.laneY + (p.track - (tracks - 1) / 2) * LANE_GAP
+      d = orthPath(a.x, a.y, b.x, b.y, laneY)
+      // 支路编号跟着自己那条轨道横向错开，避免多条道的编号叠在同一个 x 上
+      mx = (a.x + b.x) / 2 + (p.track - (tracks - 1) / 2) * 26
+      my = laneY
+      angle = a.x < b.x ? 0 : 180
+    }
+    // 同一通道里重复出现的编号（双回线）只标一次
+    const codeKey = `${String(e.code ?? "")}#${p.band}`
+    if (labelSeen.has(codeKey)) out.push({ e, d, mx, my, angle, type, ax: a.x, ay: a.y, bx: b.x, by: b.y, hideNo: true })
+    else {
+      labelSeen.add(codeKey)
+      out.push({ e, d, mx, my, angle, type, ax: a.x, ay: a.y, bx: b.x, by: b.y })
+    }
   }
   return out
 })
@@ -517,7 +675,7 @@ watch(
           <transition name="topo-fade" mode="out-in">
           <g class="drawing" :key="topo?.id" :transform="`translate(${panX} ${panY}) scale(${zoom})`">
           <!-- 线路 -->
-          <g class="lines" mask="url(#siteMask)">
+          <g class="lines" :class="{ focusing: hoverEdgeId != null }" mask="url(#siteMask)">
             <template v-for="g in edgeGeos" :key="'l' + g.e.id">
               <path
                 :d="g.d"
@@ -529,7 +687,11 @@ watch(
               <g v-if="g.type !== 'transformer'" class="arrow" :transform="`translate(${g.mx} ${g.my}) rotate(${g.angle})`">
                 <path d="M -6 -3.5 L 0 0 L -6 3.5" />
               </g>
-              <text :x="g.mx" :y="g.my - 5" class="br-no">{{ String(g.e.code ?? "").padStart(2, "0") }}</text>
+              <text v-if="!g.hideNo" :x="g.mx" :y="g.my - 5" class="br-no">{{ String(g.e.code ?? "").padStart(2, "0") }}</text>
+              <template v-if="hoverEdgeId === g.e.id">
+                <circle class="ep-hot" :cx="g.ax" :cy="g.ay" r="7" />
+                <circle class="ep-hot" :cx="g.bx" :cy="g.by" r="7" />
+              </template>
             </template>
           </g>
 
