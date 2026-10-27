@@ -230,12 +230,10 @@ const byBus = computed(() => {
   return m
 })
 
-function route(a: TopoNode, b: TopoNode) {
-  if (Math.abs(a.y - b.y) < 3) return `M ${a.x} ${a.y} H ${b.x}`
-  if (Math.abs(a.x - b.x) < 3) return `M ${a.x} ${a.y} V ${b.y}`
-  const midY = (a.y + b.y) / 2
-  return `M ${a.x} ${a.y} V ${midY} H ${b.x} V ${b.y}`
-}
+/** 节点扇出：同一节点上引出的线按角度均匀分开（link fanning），保证每根的出发点可分辨 */
+const FAN_STEP_DEG = 11
+const FAN_MAX_DEG = 42
+const CURVE_MIN = 34
 
 type EdgeGeo = {
   e: TopoEdge
@@ -244,20 +242,92 @@ type EdgeGeo = {
   my: number
   angle: number
   type: "ac" | "dc" | "transformer"
+  /** 悬停时高亮两端 */
+  ax: number
+  ay: number
+  bx: number
+  by: number
+  hideNo?: boolean
 }
 
+type Fan = { i: number; side: "a" | "b"; ang: number }
+
 const edgeGeos = computed<EdgeGeo[]>(() => {
-  const out: EdgeGeo[] = []
+  type Raw = { e: TopoEdge; a: TopoNode; b: TopoNode; angA: number; angB: number; len: number }
+  const raw: Raw[] = []
   for (const e of edges.value) {
     const a = byBus.value.get(String(e.from))
     const b = byBus.value.get(String(e.to))
     if (!a || !b) continue
-    const horizontal = Math.abs(a.y - b.y) < 3
-    const mx = horizontal ? (a.x + b.x) / 2 : b.x
-    const my = horizontal ? a.y : (a.y + b.y) / 2
-    const angle = horizontal ? (a.x < b.x ? 0 : 180) : a.y < b.y ? 90 : -90
-    out.push({ e, d: route(a, b), mx, my, angle, type: (e.lineType ?? "ac") as EdgeGeo["type"] })
+    const angA = Math.atan2(b.y - a.y, b.x - a.x)
+    const angB = Math.atan2(a.y - b.y, a.x - b.x)
+    const len = Math.hypot(b.x - a.x, b.y - a.y)
+    raw.push({ e, a, b, angA, angB, len })
   }
+
+  // 按节点收集入射端，用于扇出排序
+  const fans = new Map<string, Fan[]>()
+  const addFan = (id: string, f: Fan) => {
+    const arr = fans.get(id)
+    if (arr) arr.push(f)
+    else fans.set(id, [f])
+  }
+  raw.forEach((r, i) => {
+    addFan(String(r.a.id), { i, side: "a", ang: r.angA })
+    addFan(String(r.b.id), { i, side: "b", ang: r.angB })
+  })
+
+  // 每条边两端各自的出发角
+  const angleOf = new Map<string, number>()
+  for (const [, arr] of fans) {
+    arr.sort((p, q) => p.ang - q.ang)
+    const n = arr.length
+    const stepDeg = n > 1 ? Math.min(FAN_STEP_DEG, (FAN_MAX_DEG * 2) / (n - 1)) : 0
+    arr.forEach((f, k) => {
+      const off = ((k - (n - 1) / 2) * stepDeg * Math.PI) / 180
+      angleOf.set(`${f.i}:${f.side}`, f.ang + off)
+    })
+  }
+
+  const out: EdgeGeo[] = []
+  const labelSeen = new Set<string>()
+  raw.forEach((r, i) => {
+    const { e, a, b } = r
+    const angA = angleOf.get(`${i}:a`) ?? r.angA
+    const angB = angleOf.get(`${i}:b`) ?? r.angB
+    // 控制点沿各自的出发角甩出去，长度随弦长变化
+    const k = Math.max(CURVE_MIN, Math.min(r.len * 0.3, 108))
+    const c1x = a.x + Math.cos(angA) * k
+    const c1y = a.y + Math.sin(angA) * k
+    const c2x = b.x + Math.cos(angB) * k
+    const c2y = b.y + Math.sin(angB) * k
+    const d = `M ${a.x} ${a.y} C ${c1x} ${c1y} ${c2x} ${c2y} ${b.x} ${b.y}`
+
+    // 曲线中点与切线（用于箭头与编号）
+    const mx = (a.x + 3 * c1x + 3 * c2x + b.x) / 8
+    const my = (a.y + 3 * c1y + 3 * c2y + b.y) / 8
+    const tx = 0.75 * (c1x - a.x) + 1.5 * (c2x - c1x) + 0.75 * (b.x - c2x)
+    const ty = 0.75 * (c1y - a.y) + 1.5 * (c2y - c1y) + 0.75 * (b.y - c2y)
+    const angle = (Math.atan2(ty, tx) * 180) / Math.PI
+
+    const codeKey = `${String(e.code ?? "")}`
+    const hideNo = labelSeen.has(codeKey)
+    if (!hideNo) labelSeen.add(codeKey)
+
+    out.push({
+      e,
+      d,
+      mx,
+      my,
+      angle,
+      type: (e.lineType ?? "ac") as EdgeGeo["type"],
+      ax: a.x,
+      ay: a.y,
+      bx: b.x,
+      by: b.y,
+      hideNo
+    })
+  })
   return out
 })
 
@@ -517,7 +587,7 @@ watch(
           <transition name="topo-fade" mode="out-in">
           <g class="drawing" :key="topo?.id" :transform="`translate(${panX} ${panY}) scale(${zoom})`">
           <!-- 线路 -->
-          <g class="lines" mask="url(#siteMask)">
+          <g class="lines" :class="{ focusing: hoverEdgeId != null }" mask="url(#siteMask)">
             <template v-for="g in edgeGeos" :key="'l' + g.e.id">
               <path
                 :d="g.d"
@@ -529,7 +599,12 @@ watch(
               <g v-if="g.type !== 'transformer'" class="arrow" :transform="`translate(${g.mx} ${g.my}) rotate(${g.angle})`">
                 <path d="M -6 -3.5 L 0 0 L -6 3.5" />
               </g>
-              <text :x="g.mx" :y="g.my - 5" class="br-no">{{ String(g.e.code ?? "").padStart(2, "0") }}</text>
+              <text :x="g.mx" :y="g.my - 6" class="br-no">{{ String(g.e.code ?? "").padStart(2, "0") }}</text>
+              <!-- 悬停时把两端点亮，直接看出这条线连的是哪两个端点 -->
+              <template v-if="hoverEdgeId === g.e.id">
+                <circle class="ep-hot" :cx="g.ax" :cy="g.ay" r="7" />
+                <circle class="ep-hot" :cx="g.bx" :cy="g.by" r="7" />
+              </template>
             </template>
           </g>
 
@@ -1008,7 +1083,7 @@ watch(
   fill: none;
   stroke: var(--line);
   stroke-width: 2.1;
-  transition: stroke 0.15s, stroke-width 0.15s;
+  transition: stroke 0.15s, stroke-width 0.15s, opacity 0.15s;
   cursor: crosshair;
   filter: drop-shadow(0 0 3px rgba(140, 230, 255, 0.5));
 }
@@ -1023,7 +1098,20 @@ watch(
 }
 .route.hot {
   stroke: #ffffff;
-  stroke-width: 2.8;
+  stroke-width: 3.2;
+}
+/* 悬停某条线时，其余线压暗，避免"看不出是哪根" */
+.lines.focusing .route:not(.hot) {
+  opacity: 0.16;
+}
+.lines.focusing .br-no {
+  opacity: 0.25;
+}
+.ep-hot {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2;
+  opacity: 0.9;
 }
 .arrow path {
   fill: var(--sig-ice);
