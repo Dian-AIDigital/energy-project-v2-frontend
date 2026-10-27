@@ -1,25 +1,24 @@
 {
-  "name": "frontend",
+  "name": "energy-v2-workbench",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.10",
-    "playwright": "^1.64.1",
-    "typescript": "~6.0.3",
-    "vite": "^8.3.4",
-    "vue-tsc": "^3.3.13"
+    "dev": "vite --port 5180 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --port 5181",
+    "api": "node server/mock-api.mjs"
   },
   "dependencies": {
-    "axios": "^1.20.0",
-    "echarts": "^6.1.0",
-    "lucide-vue-next": "^0.577.0",
-    "pinia": "^4.1.0",
-    "vue": "^3.5.44"
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "express": "^4.21.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   }
 }
