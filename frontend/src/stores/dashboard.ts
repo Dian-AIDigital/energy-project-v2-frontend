@@ -65,21 +65,26 @@ export const useDashboardStore = defineStore("dashboard", {
           const width = maxX - minX || 1
           const height = maxY - minY || 1
           
-          const padding = 60
-          const canvasW = 920 - padding * 2
-          const canvasH = 480 - padding * 2
+          // 图纸画布 1000×720（与中央面板 865×632 的实际比例接近，避免上下留白）
+          // 左右留图幅坐标带，上方留说明/图例，下方留比例尺与图签
+          const DRAW = { left: 76, top: 118, right: 924, bottom: 560 }
+          const canvasW = DRAW.right - DRAW.left
+          const canvasH = DRAW.bottom - DRAW.top
 
           const scaleX = canvasW / width
           const scaleY = canvasH / height
           const scale = Math.min(scaleX, scaleY)
 
-          const offsetX = (canvasW - width * scale) / 2 + padding
-          const offsetY = (canvasH - height * scale) / 2 + padding
+          const offsetX = (canvasW - width * scale) / 2 + DRAW.left
+          const offsetY = (canvasH - height * scale) / 2 + DRAW.top
 
-          let translatedNodes = nodes.map((n: any) => {
+          const nodeKv = (n: any) =>
+            Number(n.voltage_kv ?? n.grid_voltage_kv ?? n.dc_voltage_kv) || 0
+
+          const translatedNodes = nodes.map((n: any) => {
             const nx = (Number(n.x) - minX) * scale + offsetX
             const ny = (Number(n.y) - minY) * scale + offsetY
-            
+
             return {
               id: n.node_code,
               bus_id: n.bus_id,
@@ -88,51 +93,31 @@ export const useDashboardStore = defineStore("dashboard", {
               kind: n.node_type,
               status: 'normal',
               x: nx,
-              y: ny
+              y: ny,
+              kv: nodeKv(n),
+              mw: n.rated_power_mw === null || n.rated_power_mw === undefined ? null : Number(n.rated_power_mw)
             }
           })
 
-          let minYDist = Infinity
-          for (let i = 0; i < translatedNodes.length; i++) {
-            for (let j = i + 1; j < translatedNodes.length; j++) {
-              const n1 = translatedNodes[i]
-              const n2 = translatedNodes[j]
-              if (Math.abs(n1.x - n2.x) < 20) {
-                const dy = Math.abs(n1.y - n2.y)
-                if (dy < minYDist) {
-                  minYDist = dy
-                }
-              }
-            }
+          // 注：原先这里是"防重叠放大"，但它对 x、y 乘的是同一个系数（等比），再居中回同一画布，
+          // 几何上等于什么都没做，只会把节点顶出画布（T1 有 17/30 个节点被裁掉）。
+
+          const kvByBus = new Map<string, number>()
+          const nameByBus = new Map<string, string>()
+          for (const n of translatedNodes) {
+            if (n.bus_id == null) continue
+            kvByBus.set(n.bus_id, Math.max(kvByBus.get(n.bus_id) ?? 0, n.kv ?? 0))
+            nameByBus.set(n.bus_id, n.name)
           }
 
-          const SAFE_Y = 60
-          if (minYDist < SAFE_Y && minYDist > 0) {
-            let expand = Math.min(SAFE_Y / minYDist, 4)
-            if (expand > 1.1) {
-              translatedNodes.forEach((n: any) => {
-                n.x = n.x * expand
-                n.y = n.y * expand
-              })
-
-              const nxs = translatedNodes.map((n: any) => n.x)
-              const nys = translatedNodes.map((n: any) => n.y)
-              const nMinX = Math.min(...nxs)
-              const nMaxX = Math.max(...nxs)
-              const nMinY = Math.min(...nys)
-              const nMaxY = Math.max(...nys)
-              
-              const nWidth = nMaxX - nMinX
-              const nHeight = nMaxY - nMinY
-              
-              const nOffsetX = (920 - nWidth) / 2 - nMinX
-              const nOffsetY = (480 - nHeight) / 2 - nMinY
-              
-              translatedNodes.forEach((n: any) => {
-                n.x += nOffsetX
-                n.y += nOffsetY
-              })
-            }
+          // 后端 edge_type 全是 unclassified：按两端电压差判变压器、按站名判直流联络，其余按交流
+          const isDcSide = (s?: string) => !!s && /换流|直流|柔直|MMC/i.test(s)
+          const deriveLineType = (fromBus: string, toBus: string): "ac" | "dc" | "transformer" => {
+            const a = kvByBus.get(fromBus) ?? 0
+            const b = kvByBus.get(toBus) ?? 0
+            if (a > 0 && b > 0 && Math.abs(a - b) / Math.max(a, b) > 0.3) return "transformer"
+            if (isDcSide(nameByBus.get(fromBus)) !== isDcSide(nameByBus.get(toBus))) return "dc"
+            return "ac"
           }
 
           const translatedEdges = edges
@@ -148,7 +133,16 @@ export const useDashboardStore = defineStore("dashboard", {
                 to: e.to_bus_id,
                 kind: 'line',
                 alert: false,
-                points: [[fromNode.x, fromNode.y], [toNode.x, toNode.y]] as number[][]
+                points: [[fromNode.x, fromNode.y], [toNode.x, toNode.y]] as number[][],
+                code: String(e.edge_code),
+                circuit: Number(e.circuit_no) || 1,
+                lineType: deriveLineType(e.from_bus_id, e.to_bus_id),
+                km: Number(e.length_km) || 0,
+                r: Number(e.r_ohm) || 0,
+                l: Number(e.l_h) || 0,
+                c: Number(e.c_f) || 0,
+                iRated: Number(e.rated_current_a) || 0,
+                flow: 1
               }
             })
             .filter((e: any) => e !== null)

@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# 本地验证截图（oil_ui_shoot 产物）
+shots/
+
+# 本机用 pnpm 装配时的锁文件，仓库统一以 package-lock.json 为准
+pnpm-lock.yaml
