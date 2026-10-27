@@ -63,6 +63,24 @@ function toggleFullscreen() {
   if (!document.fullscreenElement) el.requestFullscreen?.()
   else document.exitFullscreen?.()
 }
+
+function prevTopology() {
+  const list = store.topologies
+  if (!list.length) return
+  const currentIndex = list.findIndex((t: any) => t.id === store.currentTopologyId)
+  // 如果是第一个，就循环跳到最后一张
+  const targetIndex = currentIndex <= 0 ? list.length - 1 : currentIndex - 1
+  store.setTopology(list[targetIndex].id)
+}
+
+function nextTopology() {
+  const list = store.topologies
+  if (!list.length) return
+  const currentIndex = list.findIndex((t: any) => t.id === store.currentTopologyId)
+  // 如果是最后一个，就循环跳到第一张
+  const targetIndex = currentIndex >= list.length - 1 ? 0 : currentIndex + 1
+  store.setTopology(list[targetIndex].id)
+}
 </script>
 
 <template>
@@ -78,7 +96,7 @@ function toggleFullscreen() {
     </template>
 
     <div class="topo-wrap">
-      <svg 
+            <svg 
         class="topo-svg" 
         viewBox="0 0 920 480" 
         role="img" 
@@ -90,41 +108,45 @@ function toggleFullscreen() {
         @mouseleave="onMouseUp"
         style="cursor: grab;"
       >
-        <g :transform="`translate(${panX}, ${panY}) scale(${zoom})`">
-          <defs>
-            <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
-
-        <!-- buses -->
-        <g v-for="b in topo.buses" :key="b.id">
-          <line :x1="b.x" :y1="b.y" :x2="b.x + b.w" :y2="b.y" class="bus-line" filter="url(#glow)" />
-          <circle :cx="b.x" :cy="b.y" r="3" class="bus-dot" />
-          <circle :cx="b.x + b.w" :cy="b.y" r="3" class="bus-dot" />
-          <text :x="b.x + b.w / 2" :y="b.y - 6" class="bus-label">{{ b.name }}</text>
-        </g>
-
-        <!-- edges -->
-        <g v-for="e in topo.edges" :key="e.id">
-          <polyline :points="e.points.map(p => p.join(',')).join(' ')" class="edge" :class="{ alert: e.alert }" />
-          <polyline v-if="!e.alert" :points="e.points.map(p => p.join(',')).join(' ')" class="edge-flow" />
-          <polyline v-else :points="e.points.map(p => p.join(',')).join(' ')" class="edge-flow alert" />
-        </g>
-
-        <!-- nodes -->
-        <g v-for="n in topo.nodes" :key="n.id" class="node" :class="[nodeStatusClass(n.status), { selected: n.id === selectedNode }]" @click="store.selectNode(n.id)" tabindex="0" role="button" :aria-label="n.name" @keydown.enter="store.selectNode(n.id)">
-          <circle :cx="n.x" :cy="n.y" r="22" class="node-halo" />
-          <circle :cx="n.x" :cy="n.y" r="18" class="node-ring" />
+        <transition name="fade" mode="out-in">
           
-          <image :href="nodeIconSrc(n.kind)" :x="n.x - 12" :y="n.y - 12" width="24" height="24" preserveAspectRatio="xMidYMid meet" class="node-icon-img" />
+          <g :key="topo.id" :transform="`translate(${panX}, ${panY}) scale(${zoom})`">
+            <defs>
+              <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+
+            <!-- buses -->
+            <g v-for="b in topo.buses" :key="b.id">
+              <line :x1="b.x" :y1="b.y" :x2="b.x + b.w" :y2="b.y" class="bus-line" filter="url(#glow)" />
+              <circle :cx="b.x" :cy="b.y" r="3" class="bus-dot" />
+              <circle :cx="b.x + b.w" :cy="b.y" r="3" class="bus-dot" />
+              <text :x="b.x + b.w / 2" :y="b.y - 6" class="bus-label">{{ b.name }}</text>
+            </g>
+
+            <!-- edges -->
+            <g v-for="e in topo.edges" :key="e.id">
+              <polyline :points="e.points.map(p => p.join(',')).join(' ')" class="edge" :class="{ alert: e.alert }" />
+              <polyline v-if="!e.alert" :points="e.points.map(p => p.join(',')).join(' ')" class="edge-flow" />
+              <polyline v-else :points="e.points.map(p => p.join(',')).join(' ')" class="edge-flow alert" />
+            </g>
+
+            <!-- nodes -->
+            <g v-for="n in topo.nodes" :key="n.id" class="node" :class="[nodeStatusClass(n.status), { selected: n.id === selectedNode }]" @click="store.selectNode(n.id)" tabindex="0" role="button" :aria-label="n.name" @keydown.enter="store.selectNode(n.id)">
+              <circle :cx="n.x" :cy="n.y" r="22" class="node-halo" />
+              <circle :cx="n.x" :cy="n.y" r="18" class="node-ring" />
+              
+              <image :href="nodeIconSrc(n.kind)" :x="n.x - 12" :y="n.y - 12" width="24" height="24" preserveAspectRatio="xMidYMid meet" class="node-icon-img" />
+              
+              <path v-if="n.status !== 'normal'" :d="`M${n.x + 10} ${n.y - 16} l6 10 h-12 z`" class="warn-tri" />
+              
+              <text :x="n.x" :y="n.y + 34" class="node-name" style="font-size: 12px; text-anchor: middle;">{{ n.name }}</text>
+              <text :x="n.x" :y="n.y + 46" class="node-sub" style="font-size: 10px; text-anchor: middle;">{{ n.sub }}</text>
+            </g>
+          </g>
           
-          <path v-if="n.status !== 'normal'" :d="`M${n.x + 10} ${n.y - 16} l6 10 h-12 z`" class="warn-tri" />
-          
-          <text :x="n.x" :y="n.y + 34" class="node-name" style="font-size: 12px; text-anchor: middle;">{{ n.name }}</text>
-          <text :x="n.x" :y="n.y + 46" class="node-sub" style="font-size: 10px; text-anchor: middle;">{{ n.sub }}</text>
-        </g>
-        </g>
+        </transition>
       </svg>
       
       <div class="thumbs">
@@ -133,7 +155,7 @@ function toggleFullscreen() {
           <span>拓扑图选择</span>
         </div>
         <div class="thumb-list">
-          <button class="page-btn" aria-label="上一页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M14 6l-6 6 6 6"/></svg></button>
+          <button class="page-btn" aria-label="上一页" @click="prevTopology"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M14 6l-6 6 6 6"/></svg></button>
           <button
             v-for="t in store.topologies" :key="t.id"
             class="thumb" :class="{ active: t.id === store.currentTopologyId }"
@@ -145,7 +167,7 @@ function toggleFullscreen() {
             </svg>
             <span>{{ t.name }}</span>
           </button>
-          <button class="page-btn" aria-label="下一页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M10 6l6 6-6 6"/></svg></button>
+          <button class="page-btn" aria-label="下一页" @click="nextTopology"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M10 6l6 6-6 6"/></svg></button>
         </div>
       </div>
     </div>
@@ -206,5 +228,14 @@ function toggleFullscreen() {
 .topo-panel:fullscreen { background: var(--bg-page); padding: 20px; }
 .node-icon-img {
   filter: drop-shadow(0 0 4px var(--success));
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
