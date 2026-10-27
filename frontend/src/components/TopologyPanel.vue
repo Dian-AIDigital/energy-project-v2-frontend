@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, ref, onMounted } from "vue"
 import { useDashboardStore } from "../stores/dashboard"
 import GPanel from "./GPanel.vue"
 
@@ -8,6 +8,35 @@ const fullscreen = ref(false)
 
 const topo = computed(() => store.currentTopology)
 const selectedNode = computed(() => store.selectedNodeId)
+
+const zoom = ref(1)
+const panX = ref(0)
+const panY = ref(0)
+let isDragging = false
+let startX = 0
+let startY = 0
+
+function onWheel(e: WheelEvent) {
+  e.preventDefault()
+  const delta = e.deltaY > 0 ? 0.9 : 1.1
+  zoom.value = Math.max(0.5, Math.min(zoom.value * delta, 5))
+}
+
+function onMouseDown(e: MouseEvent) {
+  isDragging = true
+  startX = e.clientX - panX.value
+  startY = e.clientY - panY.value
+}
+
+function onMouseMove(e: MouseEvent) {
+  if (!isDragging) return
+  panX.value = e.clientX - startX
+  panY.value = e.clientY - startY
+}
+
+function onMouseUp() {
+  isDragging = false
+}
 
 function nodeStatusClass(s: string) {
   return s === "normal" ? "st-normal" : s === "overload" ? "st-overload" : "st-fault"
@@ -49,12 +78,24 @@ function toggleFullscreen() {
     </template>
 
     <div class="topo-wrap">
-      <svg class="topo-svg" viewBox="0 0 920 480" role="img" aria-label="电网拓扑单线图">
-        <defs>
-          <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
+      <svg 
+        class="topo-svg" 
+        viewBox="0 0 920 480" 
+        role="img" 
+        aria-label="电网拓扑单线图"
+        @wheel.prevent="onWheel"
+        @mousedown="onMouseDown"
+        @mousemove="onMouseMove"
+        @mouseup="onMouseUp"
+        @mouseleave="onMouseUp"
+        style="cursor: grab;"
+      >
+        <g :transform="`translate(${panX}, ${panY}) scale(${zoom})`">
+          <defs>
+            <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
 
         <!-- buses -->
         <g v-for="b in topo.buses" :key="b.id">
@@ -73,15 +114,19 @@ function toggleFullscreen() {
 
         <!-- nodes -->
         <g v-for="n in topo.nodes" :key="n.id" class="node" :class="[nodeStatusClass(n.status), { selected: n.id === selectedNode }]" @click="store.selectNode(n.id)" tabindex="0" role="button" :aria-label="n.name" @keydown.enter="store.selectNode(n.id)">
-          <circle :cx="n.x" :cy="n.y" r="30" class="node-halo" />
-          <circle :cx="n.x" :cy="n.y" r="26" class="node-ring" />
-          <image :href="nodeIconSrc(n.kind)" :x="n.x - 15" :y="n.y - 15" width="30" height="30" preserveAspectRatio="xMidYMid meet" class="node-icon-img" />
-          <path v-if="n.status !== 'normal'" :d="`M${n.x + 14} ${n.y - 24} l6 10 h-12 z`" class="warn-tri" />
-          <text :x="n.x" :y="n.y + 44" class="node-name">{{ n.name }}</text>
-          <text :x="n.x" :y="n.y + 58" class="node-sub">{{ n.sub }}</text>
+          <circle :cx="n.x" :cy="n.y" r="22" class="node-halo" />
+          <circle :cx="n.x" :cy="n.y" r="18" class="node-ring" />
+          
+          <image :href="nodeIconSrc(n.kind)" :x="n.x - 12" :y="n.y - 12" width="24" height="24" preserveAspectRatio="xMidYMid meet" class="node-icon-img" />
+          
+          <path v-if="n.status !== 'normal'" :d="`M${n.x + 10} ${n.y - 16} l6 10 h-12 z`" class="warn-tri" />
+          
+          <text :x="n.x" :y="n.y + 34" class="node-name" style="font-size: 12px; text-anchor: middle;">{{ n.name }}</text>
+          <text :x="n.x" :y="n.y + 46" class="node-sub" style="font-size: 10px; text-anchor: middle;">{{ n.sub }}</text>
+        </g>
         </g>
       </svg>
-
+      
       <div class="thumbs">
         <div class="thumbs-title">
           <svg viewBox="0 0 24 24" class="ti" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17 14v7M13.5 17.5h7"/></svg>
@@ -108,6 +153,15 @@ function toggleFullscreen() {
 </template>
 
 <style scoped>
+.topo-svg {
+  flex: 1; 
+  min-height: 0; 
+  width: 100%; 
+  background: rgba(2, 10, 24, 0.55); 
+  border: 1px solid rgba(0, 120, 190, 0.25); 
+  border-radius: 6px;
+  overflow: visible hidden; 
+}
 .topo-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .topo-svg { flex: 1; min-height: 0; width: 100%; background: rgba(2, 10, 24, 0.55); border: 1px solid rgba(0, 120, 190, 0.25); border-radius: 6px; }
 
@@ -130,8 +184,8 @@ function toggleFullscreen() {
 .node.st-overload .node-ring { color: var(--warning); }
 .node.st-fault .node-ring { color: var(--danger); }
 .node .node-icon { fill: none; stroke: var(--accent-cyan); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.node .node-name { fill: var(--text-primary); font-size: 13px; font-weight: 600; text-anchor: middle; }
-.node .node-sub { fill: var(--text-secondary); font-size: 11px; text-anchor: middle; }
+.node .node-name { fill: var(--text-primary); font-size: 10px; font-weight: 600; text-anchor: middle; }
+.node .node-sub { fill: var(--text-secondary); font-size: 8px; text-anchor: middle; }
 .node .warn-tri { fill: var(--warning); filter: drop-shadow(0 0 4px var(--warning)); animation: pulse-glow 1.4s ease-in-out infinite; }
 .node.selected .node-ring { stroke-width: 3; }
 .node:hover .node-ring { stroke-width: 3; }
@@ -150,4 +204,7 @@ function toggleFullscreen() {
 .page-btn:hover { border-color: var(--accent-cyan); }
 
 .topo-panel:fullscreen { background: var(--bg-page); padding: 20px; }
+.node-icon-img {
+  filter: drop-shadow(0 0 4px var(--success));
+}
 </style>

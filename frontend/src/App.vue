@@ -9,8 +9,15 @@ import NodeStatusPanel from "./components/NodeStatusPanel.vue"
 import ScenarioPanel from "./components/ScenarioPanel.vue"
 import TaskPanel from "./components/TaskPanel.vue"
 
+// 页面一加载，立刻去后端拉真实数据
+
+
 const store = useDashboardStore()
 let taskTimer: number | undefined
+
+onMounted(() => {
+  store.fetchRealData()
+})
 
 function fitScreen() {
   const el = document.querySelector<HTMLElement>(".screen")

@@ -8,6 +8,10 @@ export interface TopoNode {
   status: NodeStatus
   x: number
   y: number
+  textX?: number;
+  textY?: number;
+  textAnchor?: string;
+  bus_id?: string; 
 }
 
 export interface TopoEdge {
