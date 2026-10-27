@@ -4,6 +4,17 @@ import { useDashboardStore } from "../stores/dashboard"
 import GPanel from "./GPanel.vue"
 
 const store = useDashboardStore()
+const SHORT_COND: Record<string, string> = {
+  s1: "典型日",
+  s2: "极端天气",
+  s3: "故障恢复",
+  s4: "高比例新能源",
+  s5: "冬季低温",
+  s6: "多源协同"
+}
+const shortCond = (id: string) => SHORT_COND[id] ?? id
+const activeCond = computed(() => (store.condition || "").replace(/场景$/, ""))
+const pickCond = (id: string) => store.applyScenario(id)
 
 const sliders = computed(() => [
   { key: "pvOutput", label: "光伏出力", icon: "sun", value: store.params.pvOutput },
@@ -127,4 +138,58 @@ function iconPath(name: string) {
 .unit { color: var(--text-secondary); font-size: 12px; flex: none; }
 .submit-wrap { margin-top: auto; padding-top: 8px; display: flex; justify-content: center; border-top: 1px solid rgba(0,216,255,.12); }
 .submit { width: 85%; }
+.hud-switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.hud-switch input {
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  z-index: 10;
+}
+.hud-switch .track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.hud-switch .thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #8ba7c1; 
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.hud-switch input:checked ~ .track {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: #00e5ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+}
+.hud-switch input:checked ~ .thumb {
+  transform: translateX(1px);
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.8);
+}
 </style>

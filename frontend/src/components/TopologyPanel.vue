@@ -17,18 +17,6 @@ const ROW_REFS = ["1", "2", "3", "4"]
 const today = new Date()
 const stamp = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
 
-const SHORT_COND: Record<string, string> = {
-  s1: "典型日",
-  s2: "极端天气",
-  s3: "故障恢复",
-  s4: "高比例新能源",
-  s5: "冬季低温",
-  s6: "多源协同"
-}
-const shortCond = (id: string) => SHORT_COND[id] ?? id
-const activeCond = computed(() => (store.condition || "").replace(/场景$/, ""))
-const pickCond = (id: string) => store.applyScenario(id)
-
 /** 抬头电压图例：按当前拓扑里真实出现的母线电压等级分组（机组侧电压不进抬头） */
 const kvGroups = computed(() => {
   const levels = [
@@ -178,7 +166,17 @@ const LEGEND_DEFS: { key: SKey; label: string }[] = [
   { key: "load", label: "负荷" },
   { key: "trafo", label: "变压器" }
 ]
-
+const SHORT_COND: Record<string, string> = {
+  s1: "典型日",
+  s2: "极端天气",
+  s3: "故障恢复",
+  s4: "高比例新能源",
+  s5: "冬季低温",
+  s6: "多源协同"
+}
+const shortCond = (id: string) => SHORT_COND[id] ?? id
+const activeCond = computed(() => (store.condition || "").replace(/场景$/, ""))
+const pickCond = (id: string) => store.applyScenario(id)
 /** 粗估文字宽度：中文 11px、其它 6px */
 const textWidth = (s: string) => [...s].reduce((w, ch) => w + (/[\u4e00-\u9fa5]/.test(ch) ? 11 : 6), 0)
 
@@ -323,8 +321,7 @@ function stepTopology(step: number) {
   const next = list[(i + step + list.length) % list.length]
   if (next) store.setTopology(next.id)
 }
-const prevTopology = () => stepTopology(-1)
-const nextTopology = () => stepTopology(1)
+
 
 /* ---------------- 全屏播放 ---------------- */
 
@@ -417,6 +414,7 @@ watch(
   <section class="sheet" ref="sheetRef" :class="{ 'is-full': isFullMode }" aria-label="拓扑单线图">
     <header class="sheet-top">
       <div class="sheet-name">
+        
         <span class="eyebrow">单线图 / ONE-LINE</span>
         <h2>{{ topo?.name || "拓扑单线图" }}</h2>
         <div class="kvs">
@@ -426,10 +424,10 @@ watch(
           <span class="kvs-sep" />
           <span class="unit">节点点击可切换档案 · 悬停线路读参数 · 滚轮缩放</span>
         </div>
+        
       </div>
-
+            <!-- 🌟 加在这里 -->
       <div class="layers" aria-label="场景标签">
-        <span class="eyebrow">场景</span>
         <button
           v-for="s in store.scenarios"
           :key="s.id"
@@ -441,11 +439,6 @@ watch(
         </button>
       </div>
 
-      <div class="topo-nav">
-        <button class="nav-btn" title="上一张拓扑" aria-label="上一张拓扑" @click="prevTopology">‹</button>
-        <button class="nav-btn" title="下一张拓扑" aria-label="下一张拓扑" @click="nextTopology">›</button>
-      </div>
-
       <button
         class="fs-btn"
         :class="{ on: isFullMode }"
@@ -453,7 +446,7 @@ watch(
         :aria-pressed="isFullMode"
         @click="toggleFull"
       >
-        <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 12 12" aria-hidden="true">
           <path
             v-if="!isFullMode"
             d="M1 4.2V1h3.2M11 7.8V11H7.8M1 7.8V11h3.2M11 4.2V1H7.8"
@@ -542,6 +535,7 @@ watch(
               :class="[symKeyOf(n), typeClass(n), { on: n.id === store.selectedNodeId, dim: sel && n.id !== sel.id && !isNeighbour(n) }]"
               @click="store.selectedNodeId === n.id ? store.selectNode('') : store.selectNode(n.id)"
             >
+              <circle :cx="n.x" :cy="n.y" :r="SITE_R + 6" fill="transparent" style="cursor: pointer;" />
               <!-- 符号圆框（除主网外全部节点），框内连线已被蒙版挖空 -->
               <circle v-if="symKeyOf(n) !== 'grid'" class="site-ring" :cx="n.x" :cy="n.y" :r="SITE_R" />
 
@@ -883,10 +877,10 @@ watch(
 .fs-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin-left: 10px;
-  padding: 4px 9px;
-  font-size: 10.5px;
+  gap: 6px;
+  margin-left: 16px;
+  padding: 7px 16px;
+  font-size: 13px;
   font-family: inherit;
   color: var(--p3);
   background: rgba(95, 224, 255, 0.06);
@@ -1428,5 +1422,35 @@ watch(
 }
 .anno-close:hover {
   fill: #ff5e5e;
+}
+.layers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.layer {
+  white-space: nowrap;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--p3);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.layer:hover {
+  color: var(--sig-ice);
+  background: rgba(95, 224, 255, 0.08);
+}
+.layer.pending {
+  color: var(--p4);
+}
+.layer.on {
+  color: var(--sig-ice);
+  background: var(--sig-dim);
+  font-weight: 500;
 }
 </style>
