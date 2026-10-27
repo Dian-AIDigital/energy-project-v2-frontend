@@ -5,6 +5,13 @@
 
 ![风格](https://img.shields.io/badge/%E9%A3%8E%E6%A0%BC-%E5%B7%A5%E7%A8%8B%E5%9B%BE%E7%BA%B8%E7%B1%B3%E7%99%BD-2f6f8f) ![技术栈](https://img.shields.io/badge/Vue3-Vite-TS-4b8bbe)
 
+## 预览
+
+![米白图纸大屏](./docs/shots/v1-paper.jpg)
+
+### 告警态（石墨绿主题）
+
+![告警态](./docs/shots/v1-warn.jpg)
 ## 分支说明
 
 本仓库用分支存放三个不同版本的前端：
