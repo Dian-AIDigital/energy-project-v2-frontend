@@ -27,6 +27,8 @@ function fitScreen() {
 }
 
 onMounted(() => {
+  const skin = new URLSearchParams(location.search).get("skin")
+  document.body.dataset.skin = skin || "tex"
   fitScreen()
   window.addEventListener("resize", fitScreen)
   taskTimer = window.setInterval(() => store.tickTasks(), 2500)

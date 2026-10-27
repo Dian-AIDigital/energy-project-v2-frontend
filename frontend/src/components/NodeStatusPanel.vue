@@ -21,7 +21,7 @@ const powerBars = computed(() => {
 </script>
 
 <template>
-  <GPanel title="拓扑节点状态信息">
+  <GPanel title="拓扑节点状态信息" icon-src="/icons/13-bar-chart.png">
     <template #icon>
       <path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5M9 13h6M9 17h4"/>
     </template>
