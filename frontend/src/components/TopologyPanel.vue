@@ -540,7 +540,7 @@ watch(
               :key="n.id"
               class="node"
               :class="[symKeyOf(n), typeClass(n), { on: n.id === store.selectedNodeId, dim: sel && n.id !== sel.id && !isNeighbour(n) }]"
-              @click="store.selectNode(n.id)"
+              @click="store.selectedNodeId === n.id ? store.selectNode('') : store.selectNode(n.id)"
             >
               <!-- 符号圆框（除主网外全部节点），框内连线已被蒙版挖空 -->
               <circle v-if="symKeyOf(n) !== 'grid'" class="site-ring" :cx="n.x" :cy="n.y" :r="SITE_R" />
@@ -603,7 +603,8 @@ watch(
               <rect :width="anno.w" :height="anno.h" class="anno-box" />
               <path :d="`M 4 12 V ${anno.h - 12}`" class="anno-accent" />
               <text x="16" y="22" class="anno-h">{{ sel.name }}</text>
-              <text :x="anno.w - 14" y="22" class="anno-h num" text-anchor="end">{{ sel.kv || "—" }} kV</text>
+              <text @click.stop="store.selectNode('')" :x="anno.w - 14" y="20" class="anno-close" text-anchor="end">✕</text>
+              <text :x="anno.w - 32" y="22" class="anno-h num" text-anchor="end">{{ sel.kv || "—" }} kV</text>
               <line x1="16" y1="33" :x2="anno.w - 14" y2="33" class="anno-rule" />
               <text x="16" y="56" class="anno-l">电压 U</text>
               <text :x="anno.w - 14" y="56" class="anno-n" text-anchor="end">{{ (selRead?.v ?? 0).toFixed(1) }} kV</text>
@@ -1281,6 +1282,14 @@ watch(
 /* ---- 说明块（HTML 覆盖层，字号可调大、内容可滚动） ---- */
 .notes-fo {
   overflow: visible;
+  animation: fadeOutNotes 1s ease 6s forwards;
+}
+@keyframes fadeOutNotes {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
 }
 .sheet-notes {
   width: 100%;
@@ -1410,5 +1419,14 @@ watch(
 }
 .tb .v.num {
   font-family: var(--font-mono);
+}
+.anno-close {
+  font-size: 14px;
+  fill: var(--p4);
+  cursor: pointer;
+  transition: fill 0.15s;
+}
+.anno-close:hover {
+  fill: #ff5e5e;
 }
 </style>
