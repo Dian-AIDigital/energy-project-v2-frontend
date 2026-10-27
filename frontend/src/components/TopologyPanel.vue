@@ -229,10 +229,7 @@ const byBus = computed(() => {
 })
 
 function route(a: TopoNode, b: TopoNode) {
-  if (Math.abs(a.y - b.y) < 3) return `M ${a.x} ${a.y} H ${b.x}`
-  if (Math.abs(a.x - b.x) < 3) return `M ${a.x} ${a.y} V ${b.y}`
-  const midY = (a.y + b.y) / 2
-  return `M ${a.x} ${a.y} V ${midY} H ${b.x} V ${b.y}`
+ return `M ${a.x} ${a.y} L ${b.x} ${b.y}`
 }
 
 type EdgeGeo = {
@@ -250,10 +247,9 @@ const edgeGeos = computed<EdgeGeo[]>(() => {
     const a = byBus.value.get(String(e.from))
     const b = byBus.value.get(String(e.to))
     if (!a || !b) continue
-    const horizontal = Math.abs(a.y - b.y) < 3
-    const mx = horizontal ? (a.x + b.x) / 2 : b.x
-    const my = horizontal ? a.y : (a.y + b.y) / 2
-    const angle = horizontal ? (a.x < b.x ? 0 : 180) : a.y < b.y ? 90 : -90
+    const mx = (a.x + b.x) / 2 
+    const my = (a.y + b.y) / 2
+    const angle = Math.atan2(b.y - a.y, b.x - a.x) * (180 / Math.PI)
     out.push({ e, d: route(a, b), mx, my, angle, type: (e.lineType ?? "ac") as EdgeGeo["type"] })
   }
   return out
