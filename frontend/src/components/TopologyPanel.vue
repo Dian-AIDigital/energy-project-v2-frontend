@@ -314,6 +314,18 @@ const selRead = computed(() => {
   }
 })
 
+/* ---------------- 上一张 / 下一张拓扑（接续 main 上 5c360c8 的交互） ---------------- */
+
+function stepTopology(step: number) {
+  const list = store.topologies
+  if (!list.length) return
+  const i = list.findIndex((t) => t.id === store.currentTopologyId)
+  const next = list[(i + step + list.length) % list.length]
+  if (next) store.setTopology(next.id)
+}
+const prevTopology = () => stepTopology(-1)
+const nextTopology = () => stepTopology(1)
+
 /* ---------------- 全屏播放 ---------------- */
 
 const sheetRef = ref<HTMLElement | null>(null)
@@ -429,6 +441,11 @@ watch(
         </button>
       </div>
 
+      <div class="topo-nav">
+        <button class="nav-btn" title="上一张拓扑" aria-label="上一张拓扑" @click="prevTopology">‹</button>
+        <button class="nav-btn" title="下一张拓扑" aria-label="下一张拓扑" @click="nextTopology">›</button>
+      </div>
+
       <button
         class="fs-btn"
         :class="{ on: isFullMode }"
@@ -497,7 +514,8 @@ watch(
         </defs>
 
         <g clip-path="url(#fieldClip)">
-          <g class="drawing" :transform="`translate(${panX} ${panY}) scale(${zoom})`">
+          <transition name="topo-fade" mode="out-in">
+          <g class="drawing" :key="topo?.id" :transform="`translate(${panX} ${panY}) scale(${zoom})`">
           <!-- 线路 -->
           <g class="lines" mask="url(#siteMask)">
             <template v-for="g in edgeGeos" :key="'l' + g.e.id">
@@ -562,6 +580,7 @@ watch(
             </g>
           </g>
           </g>
+          </transition>
         </g>
 
         <!-- 引出线与标注：跟随缩放平移，但不被裁剪（它可以靠近顶部） -->
@@ -818,6 +837,45 @@ watch(
   color: var(--sig-ice);
   background: var(--sig-dim);
   font-weight: 500;
+}
+
+/* ---- 上一张 / 下一张拓扑 ---- */
+.topo-nav {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 10px;
+  flex: none;
+}
+.nav-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 2px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--p3);
+  background: rgba(95, 224, 255, 0.06);
+  border: 1px solid rgba(95, 224, 255, 0.22);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.nav-btn:hover {
+  color: var(--sig-ice);
+  background: rgba(95, 224, 255, 0.14);
+  border-color: rgba(95, 224, 255, 0.45);
+}
+/* 切拓扑时的淡入淡出 */
+.topo-fade-enter-active,
+.topo-fade-leave-active {
+  transition: opacity 0.26s ease;
+}
+.topo-fade-enter-from,
+.topo-fade-leave-to {
+  opacity: 0;
 }
 
 /* ---- 全屏播放 ---- */
