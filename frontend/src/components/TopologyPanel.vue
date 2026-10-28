@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue"
+import { computed, onMounted, onUnmounted, ref, watch, nextTick } from "vue"
 import { useDashboardStore } from "../stores/dashboard"
 import type { TopoEdge, TopoNode } from "../types"
 
@@ -385,12 +385,46 @@ function resetView() {
   panX.value = 0
   panY.value = 0
 }
+const svgRef = ref<SVGSVGElement | null>(null)
+const drawingRef = ref<SVGGElement | null>(null)
 
+// 自动适应画布全貌
+function fitView() {
+  nextTick(() => {
+    setTimeout(() => {
+      if (!svgRef.value || !drawingRef.value) return
+      try {
+        const bbox = drawingRef.value.getBBox()
+        if (bbox.width <= 0 || bbox.height <= 0) return
+
+        const padding = 80
+        const canvasW = 1000 - padding * 2
+        const canvasH = 585 - padding * 2
+
+        const scaleX = canvasW / bbox.width
+        const scaleY = canvasH / bbox.height
+        const newZoom = Math.min(scaleX, scaleY) 
+
+        const centerX = bbox.x + bbox.width / 2
+        const centerY = bbox.y + bbox.height / 2
+
+        const targetX = 1000 / 2
+        const targetY = 70 + 585 / 2
+
+        panX.value = targetX - centerX * newZoom
+        panY.value = targetY - centerY * newZoom
+        zoom.value = newZoom
+      } catch (err) {
+        console.warn("全图视野计算失败", err)
+      }
+    }, 60)
+  })
+}
 /* 拓扑切换后：清空缩放，并把选中落到第一个节点 */
 watch(
   () => store.currentTopologyId,
   () => {
-    resetView()
+    fitView()
     const list = nodes.value
     if (list.length && !list.some((n) => n.id === store.selectedNodeId)) store.selectNode(list[0].id)
   },
@@ -479,6 +513,7 @@ watch(
 
       <svg
         class="canvas"
+        ref="svgRef"
         viewBox="0 0 1000 655"
         preserveAspectRatio="xMidYMid meet"
         role="img"
@@ -504,7 +539,7 @@ watch(
 
         <g clip-path="url(#fieldClip)">
           <transition name="topo-fade" mode="out-in">
-          <g class="drawing" :key="topo?.id" :transform="`translate(${panX} ${panY}) scale(${zoom})`">
+          <g class="drawing" :key="topo?.id" ref="drawingRef" :transform="`translate(${panX} ${panY}) scale(${zoom})`">
           <!-- 线路 -->
           <g class="lines" mask="url(#siteMask)">
             <template v-for="g in edgeGeos" :key="'l' + g.e.id">
